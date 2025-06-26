@@ -15,7 +15,7 @@
 <body>
 
   <h1>Asistente Virtual 3D</h1>
-  <iframe id="avatar" allow="camera *; microphone *;" src="https://models.readyplayer.me/685d7da90a7a95e992d8045f.glb"></iframe>
+  <iframe id="avatar" allow="camera *; microphone *;" src="https://avataria-3hmq26.readyplayer.me/avatar?id=685d7da90a7a95e992d8045f"></iframe>
 
   <div id="respuesta">Presioná el botón y hablá</div>
   <button onclick="iniciarHabla()">🎤 Hablar</button>
@@ -50,7 +50,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer TU_CLAVE_DE_OPENAI"
+            "Authorization": "Bearer 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"
           },
           body: JSON.stringify({
             model: "gpt-4",
