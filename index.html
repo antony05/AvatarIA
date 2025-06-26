@@ -1,85 +1,128 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Asistente Virtual 3D</title>
-  <script src="https://unpkg.com/@readyplayerme/viseme"></script>
-  <style>
-    body { margin: 0; background: #000; color: white; text-align: center; font-family: sans-serif; }
-    iframe { width: 100%; height: 80vh; border: none; }
-    button { font-size: 1.2em; padding: 10px 20px; margin-top: 10px; }
-    #respuesta { padding: 1em; font-size: 1.1em; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Asistente Virtual 3D</title>
+    <script src="https://unpkg.com/@readyplayerme/viseme"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: white;
+            text-align: center;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        iframe {
+            width: 100%;
+            max-width: 800px;
+            height: 80vh;
+            border: none;
+            background: #111;
+        }
+        button {
+            font-size: 1.2em;
+            padding: 10px 20px;
+            margin-top: 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #4CAF50;
+            color: white;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #respuesta {
+            padding: 1em;
+            font-size: 1.1em;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
 
-  <h1>Asistente Virtual 3D</h1>
-<iframe
-  id="avatar"
-  allow="camera *; microphone *;"
-  src="https://avataria-3hmq26.readyplayer.me/avatar?id=685d8bb755c53bb7da26f799"
-  style="width: 100%; height: 80vh; border: none;"
-></iframe>
+    <h1>Asistente Virtual 3D</h1>
+    <iframe
+        id="avatar"
+        allow="camera; microphone; clipboard-read; clipboard-write; web-share"
+        src="https://demo.readyplayer.me/avatar?model=https://models.readyplayer.me/685d8bb755c53bb7da26f799.glb?pose=A_pose&lod=1&textureAtlas=1024"
+    ></iframe>
 
+    <div id="respuesta">Presiona el botón y habla</div>
+    <button onclick="iniciarHabla()">🎤 Hablar</button>
 
+    <script>
+        const iframe = document.getElementById('avatar');
+        const respuestaDiv = document.getElementById('respuesta');
 
-  <div id="respuesta">Presioná el botón y hablá</div>
-  <button onclick="iniciarHabla()">🎤 Hablar</button>
+        window.addEventListener('message', (event) => {
+            if (event.data.source === 'readyplayerme') {
+                if (event.data.eventName === 'v1.frame.ready') {
+                    console.log('El iframe de Ready Player Me está listo.');
+                }
+            }
+        });
 
-  <script>
-    const iframe = document.getElementById('avatar');
-    const respuestaDiv = document.getElementById('respuesta');
-    let avatarLoaded = false;
+        function iniciarHabla() {
+            const reconocimiento = new (window.webkitSpeechRecognition || window.SpeechRecognition)();
+            if (!reconocimiento) {
+                respuestaDiv.textContent = "Lo sentimos, tu navegador no soporta el reconocimiento de voz.";
+                return;
+            }
 
-    window.addEventListener('message', (event) => {
-      if (event.data.source === 'readyplayerme') {
-        if (event.data.eventName === 'v1.frame.ready') {
-          iframe.contentWindow.postMessage({ target: 'readyplayerme', type: 'subscribe', eventName: 'v1.avatar.exported' }, '*');
-          iframe.contentWindow.postMessage({ target: 'readyplayerme', type: 'subscribe', eventName: 'v1.user.set' }, '*');
+            reconocimiento.lang = 'es-ES';
+            reconocimiento.interimResults = false;
+            reconocimiento.maxAlternatives = 1;
+
+            respuestaDiv.textContent = "Escuchando...";
+            reconocimiento.start();
+
+            reconocimiento.onresult = async (evento) => {
+                const textoUsuario = evento.results[0][0].transcript;
+                respuestaDiv.textContent = `Tú dijiste: "${textoUsuario}"`;
+                hablarYAnimar(textoUsuario);
+            };
+
+            reconocimiento.onerror = (evento) => {
+                console.error("Error en el reconocimiento de voz:", evento.error);
+                respuestaDiv.textContent = "Error al reconocer la voz. Intenta de nuevo.";
+            };
         }
-        if (event.data.eventName === 'v1.avatar.exported') {
-          avatarLoaded = true;
+
+        function hablarYAnimar(texto) {
+            const textoRespuesta = "Hola, soy tu asistente virtual. Todavía no tengo conexión con OpenAI, pero puedo hablar contigo localmente.";
+            
+            respuestaDiv.textContent = textoRespuesta;
+
+            const mensaje = new SpeechSynthesisUtterance(textoRespuesta);
+            mensaje.lang = 'es-ES';
+
+            mensaje.onstart = () => {
+                iframe.contentWindow.postMessage({
+                    target: 'readyplayerme',
+                    type: 'v1.viseme.start',
+                    payload: { text: textoRespuesta } 
+                }, '*');
+            };
+            
+            mensaje.onend = () => {
+                iframe.contentWindow.postMessage({
+                    target: 'readyplayerme',
+                    type: 'v1.viseme.stop'
+                }, '*');
+            };
+
+            window.speechSynthesis.speak(mensaje);
         }
-      }
-    });
-
-    function iniciarHabla() {
-      const reconocimiento = new (webkitSpeechRecognition || SpeechRecognition)();
-      reconocimiento.lang = 'es-ES';
-      reconocimiento.start();
-
-      reconocimiento.onresult = async (evento) => {
-        const textoUsuario = evento.results[0][0].transcript;
-        respuestaDiv.textContent = `Tú dijiste: ${textoUsuario}`;
-
-        const textoRespuesta = "Hola, soy tu asistente virtual. Todavía no tengo conexión con OpenAI, pero puedo hablar contigo localmente.";
-        respuestaDiv.textContent = textoRespuesta;
-
-        const mensaje = new SpeechSynthesisUtterance(textoRespuesta);
-        mensaje.lang = 'es-ES';
-
-        mensaje.onstart = () => {
-          iframe.contentWindow.postMessage({
-            target: 'readyplayerme',
-            type: 'v1.viseme.start',
-            payload: { text: textoRespuesta }
-          }, '*');
-        };
-        mensaje.onend = () => {
-          iframe.contentWindow.postMessage({
-            target: 'readyplayerme',
-            type: 'v1.viseme.stop'
-          }, '*');
-        };
-
-        speechSynthesis.speak(mensaje);
-      };
-
-      reconocimiento.onerror = () => {
-        respuestaDiv.textContent = "Error al reconocer la voz. Intenta de nuevo.";
-      };
-    }
-  </script>
+    </script>
 </body>
 </html>
