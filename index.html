@@ -1,113 +1,73 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Asistente Virtual 3D Offline</title>
+  <meta charset="UTF-8">
+  <title>Asistente Virtual 3D</title>
   <script src="https://unpkg.com/@readyplayerme/viseme"></script>
   <style>
-    body {
-      margin: 0;
-      background: #000;
-      color: white;
-      text-align: center;
-      font-family: sans-serif;
-    }
-    iframe {
-      width: 100%;
-      height: 80vh;
-      border: none;
-    }
-    button {
-      font-size: 1.2em;
-      padding: 10px 20px;
-      margin-top: 10px;
-    }
-    #respuesta {
-      padding: 1em;
-      font-size: 1.1em;
-    }
+    body { margin: 0; background: #000; color: white; text-align: center; font-family: sans-serif; }
+    iframe { width: 100%; height: 80vh; border: none; }
+    button { font-size: 1.2em; padding: 10px 20px; margin-top: 10px; }
+    #respuesta { padding: 1em; font-size: 1.1em; }
   </style>
 </head>
 <body>
-  <h1>Asistente Virtual 3D Offline</h1>
-  <iframe
-    id="avatar"
-    allow="camera *; microphone *;"
-    src="https://avataria-3hmq26.readyplayer.me/avatar?id=685d7da90a7a95e992d8045f"
-  ></iframe>
+
+  <h1>Asistente Virtual 3D</h1>
+  <iframe 
+    id="avatar" 
+    allow="camera *; microphone *;" 
+    src="https://demo.readyplayer.me/webview?frameApi&avatarUrl=https://models.readyplayer.me/685d886d55c53bb7da269e22.glb">
+  </iframe>
 
   <div id="respuesta">Presioná el botón y hablá</div>
   <button onclick="iniciarHabla()">🎤 Hablar</button>
 
   <script>
-    const iframe = document.getElementById("avatar");
-    const respuestaDiv = document.getElementById("respuesta");
+    const iframe = document.getElementById('avatar');
+    const respuestaDiv = document.getElementById('respuesta');
+    let avatarLoaded = false;
 
-    window.addEventListener("message", (event) => {
-      if (event.data.source === "readyplayerme") {
-        if (event.data.eventName === "v1.frame.ready") {
-          iframe.contentWindow.postMessage(
-            { target: "readyplayerme", type: "subscribe", eventName: "v1.avatar.exported" },
-            "*"
-          );
-          iframe.contentWindow.postMessage(
-            { target: "readyplayerme", type: "subscribe", eventName: "v1.user.set" },
-            "*"
-          );
+    window.addEventListener('message', (event) => {
+      if (event.data.source === 'readyplayerme') {
+        if (event.data.eventName === 'v1.frame.ready') {
+          iframe.contentWindow.postMessage({ target: 'readyplayerme', type: 'subscribe', eventName: 'v1.avatar.exported' }, '*');
+          iframe.contentWindow.postMessage({ target: 'readyplayerme', type: 'subscribe', eventName: 'v1.user.set' }, '*');
+        }
+        if (event.data.eventName === 'v1.avatar.exported') {
+          avatarLoaded = true;
         }
       }
     });
 
-    // Respuestas fijas para probar offline
-    const respuestasSimuladas = {
-      "hola": "¡Hola! ¿En qué puedo ayudarte?",
-      "cómo estás": "Estoy bien, gracias por preguntar.",
-      "qué puedes hacer": "Puedo escucharte y responderte con respuestas fijas.",
-      "adiós": "¡Hasta luego! Que tengas un buen día.",
-    };
-
     function iniciarHabla() {
       const reconocimiento = new (webkitSpeechRecognition || SpeechRecognition)();
-      reconocimiento.lang = "es-ES";
+      reconocimiento.lang = 'es-ES';
       reconocimiento.start();
 
-      reconocimiento.onresult = (evento) => {
-        const textoUsuario = evento.results[0][0].transcript.toLowerCase();
+      reconocimiento.onresult = async (evento) => {
+        const textoUsuario = evento.results[0][0].transcript;
         respuestaDiv.textContent = `Tú dijiste: ${textoUsuario}`;
 
-        // Buscar respuesta simulada (o fallback)
-        let textoRespuesta = "Lo siento, no entendí eso.";
-
-        for (const clave in respuestasSimuladas) {
-          if (textoUsuario.includes(clave)) {
-            textoRespuesta = respuestasSimuladas[clave];
-            break;
-          }
-        }
-
+        const textoRespuesta = "Hola, soy tu asistente virtual. Todavía no tengo conexión con OpenAI, pero puedo hablar contigo localmente.";
         respuestaDiv.textContent = textoRespuesta;
 
         const mensaje = new SpeechSynthesisUtterance(textoRespuesta);
-        mensaje.lang = "es-ES";
+        mensaje.lang = 'es-ES';
 
         mensaje.onstart = () => {
-          iframe.contentWindow.postMessage(
-            {
-              target: "readyplayerme",
-              type: "v1.viseme.start",
-              payload: { text: textoRespuesta },
-            },
-            "*"
-          );
+          iframe.contentWindow.postMessage({
+            target: 'readyplayerme',
+            type: 'v1.viseme.start',
+            payload: { text: textoRespuesta }
+          }, '*');
         };
         mensaje.onend = () => {
-          iframe.contentWindow.postMessage(
-            {
-              target: "readyplayerme",
-              type: "v1.viseme.stop",
-            },
-            "*"
-          );
+          iframe.contentWindow.postMessage({
+            target: 'readyplayerme',
+            type: 'v1.viseme.stop'
+          }, '*');
         };
 
         speechSynthesis.speak(mensaje);
@@ -120,4 +80,3 @@
   </script>
 </body>
 </html>
-
