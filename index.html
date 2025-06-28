@@ -2,184 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Asistente Virtual 3D</title>
-    <script src="https://unpkg.com/@readyplayerme/viseme"></script>
-    <style>
-        body {
-            margin: 0;
-            background: #000;
-            color: white;
-            text-align: center;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        iframe {
-            width: 100%;
-            max-width: 800px;
-            height: 80vh;
-            border: none;
-            background: #111;
-        }
-        button {
-            font-size: 1.2em;
-            padding: 10px 20px;
-            margin-top: 20px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background: #4CAF50;
-            color: white;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background: #45a049;
-        }
-        #respuesta {
-            padding: 1em;
-            font-size: 1.1em;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            margin-top: 10px;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
+    <title>Asistente Virtual 3D con Gemini (Mejorado)</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>Asistente Virtual 3D</h1>
+    <h1>Asistente Virtual 3D con Gemini</h1>
     <iframe
         id="avatar"
         allow="camera; microphone; clipboard-read; clipboard-write; web-share"
         src="https://demo.readyplayer.me/avatar?model=https://models.readyplayer.me/685d8bb755c53bb7da26f799.glb?pose=A_pose&lod=1&textureAtlas=1024"
     ></iframe>
 
-    <div id="respuesta">Presiona el botón y habla</div>
-    <button id="talkButton">🎤 Hablar</button>
+    <div id="respuesta">Cargando asistente...</div>
+    <button id="talkButton" disabled>🎤 Hablar</button>
 
-    <script>
-        const iframe = document.getElementById('avatar');
-        const respuestaDiv = document.getElementById('respuesta');
-        const talkButton = document.getElementById('talkButton');
-
-        // Variables de estado
-        let recognition;
-        let isSpeaking = false;
-
-        // --- 1. Inicialización y Event Listeners ---
-        function initApp() {
-            // Verifica la compatibilidad con el navegador
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                respuestaDiv.textContent = "Tu navegador no soporta el reconocimiento de voz.";
-                talkButton.disabled = true; // Deshabilita el botón si no hay soporte
-                return;
-            }
-
-            // Inicializa el reconocimiento de voz
-            recognition = new (window.webkitSpeechRecognition || window.SpeechRecognition)();
-            recognition.lang = 'es-ES';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-
-            // Define los event listeners del reconocimiento
-            recognition.onresult = handleRecognitionResult;
-            recognition.onerror = handleRecognitionError;
-            recognition.onend = handleRecognitionEnd;
-
-            // Agrega el evento al botón
-            talkButton.addEventListener('click', startRecognition);
-
-            // Escucha mensajes del iframe de Ready Player Me
-            window.addEventListener('message', handleIframeMessage);
-        }
-
-        // --- 2. Manejo de eventos del iframe ---
-        function handleIframeMessage(event) {
-            if (event.data.source === 'readyplayerme' && event.data.eventName === 'v1.frame.ready') {
-                console.log('El avatar está listo para recibir mensajes.');
-                // Puedes suscribirte a eventos aquí, si es necesario
-            }
-        }
-
-        // --- 3. Funciones de reconocimiento de voz ---
-        function startRecognition() {
-            if (isSpeaking) {
-                // Evita que el usuario hable mientras el asistente responde
-                return;
-            }
-            respuestaDiv.textContent = "Escuchando...";
-            talkButton.disabled = true; // Deshabilita el botón mientras se escucha
-            recognition.start();
-        }
-
-        function handleRecognitionResult(event) {
-            const textoUsuario = event.results[0][0].transcript;
-            respuestaDiv.textContent = `Tú dijiste: "${textoUsuario}"`;
-            // Llama a la función que procesa la respuesta
-            processAndSpeak(textoUsuario);
-        }
-
-        function handleRecognitionError(event) {
-            console.error("Error en el reconocimiento de voz:", event.error);
-            let errorMessage = "Error al reconocer la voz.";
-            if (event.error === 'not-allowed') {
-                errorMessage = "Por favor, permite el acceso al micrófono en tu navegador.";
-            } else if (event.error === 'no-speech') {
-                errorMessage = "No se detectó voz. Intenta de nuevo.";
-            }
-            respuestaDiv.textContent = errorMessage;
-            talkButton.disabled = false; // Vuelve a habilitar el botón
-        }
-
-        function handleRecognitionEnd() {
-            console.log('Reconocimiento de voz finalizado.');
-            talkButton.disabled = false; // Vuelve a habilitar el botón
-        }
-
-        // --- 4. Funciones de síntesis de voz y animación ---
-        async function processAndSpeak(textoUsuario) {
-            // Aquí puedes agregar la lógica para procesar el texto del usuario
-            // Por ahora, solo usamos una respuesta predefinida
-            const textoRespuesta = "Hola, soy tu asistente virtual. Aunque no estoy conectado a una IA, puedo responderte esto.";
-            
-            // Crea el mensaje de voz
-            const mensaje = new SpeechSynthesisUtterance(textoRespuesta);
-            mensaje.lang = 'es-ES';
-
-            // Escucha el inicio y el fin del habla para controlar la animación del avatar
-            mensaje.onstart = () => {
-                isSpeaking = true;
-                // Envía el texto al iframe para que el avatar genere los visemas
-                iframe.contentWindow.postMessage({
-                    target: 'readyplayerme',
-                    type: 'v1.viseme.start',
-                    payload: { text: textoRespuesta } 
-                }, '*');
-            };
-            
-            mensaje.onend = () => {
-                isSpeaking = false;
-                // Detiene la animación de los labios
-                iframe.contentWindow.postMessage({
-                    target: 'readyplayerme',
-                    type: 'v1.viseme.stop'
-                }, '*');
-            };
-
-            // Habla el mensaje
-            window.speechSynthesis.speak(mensaje);
-        }
-
-        // Inicia la aplicación cuando el DOM esté cargado
-        document.addEventListener('DOMContentLoaded', initApp);
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
